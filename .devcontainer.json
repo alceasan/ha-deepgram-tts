@@ -1,0 +1,18 @@
+{
+  "name": "Home Assistant Custom Component: deepgram_tts",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": "."
+  },
+  "settings": {
+    "terminal.integrated.shell.linux": "/bin/bash"
+  },
+  "extensions": [
+    "ms-python.python",
+    "ms-python.vscode-pylance",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig"
+  ],
+  "postCreateCommand": "pip install -r requirements.txt",
+  "remoteUser": "vscode"
+}
