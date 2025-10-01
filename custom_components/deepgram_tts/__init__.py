@@ -49,11 +49,7 @@ async def async_setup_entry(
         "processor": processor,
     }
 
-    # Create and add the entity
-    entity = DeepgramTtsEntity(entry, client, processor)
-    hass.async_create_task(
-        hass.config_entries.async_forward_entry_setups(entry, [ "tts" ])
-    )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     entry.async_on_unload(entry.add_update_listener(async_reload_entry))
 

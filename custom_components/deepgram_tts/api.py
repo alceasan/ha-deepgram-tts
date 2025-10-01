@@ -102,6 +102,10 @@ class DeepgramTTSApiClient:
 
         Returns audio data bytes.
         """
+        # Ensure model is not empty
+        if not model or model.strip() == "":
+            model = "aura-2-thalia-en"
+
         headers = {
             "Authorization": f"Token {self._api_key}",
             "Content-Type": "text/plain",

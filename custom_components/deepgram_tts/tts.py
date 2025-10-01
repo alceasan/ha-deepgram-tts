@@ -38,6 +38,10 @@ async def async_setup_entry(
     processor = hass.data[DOMAIN][config_entry.entry_id]["processor"]
     async_add_entities([DeepgramTtsEntity(config_entry, client, processor)])
 
+async def async_setup(hass: HomeAssistant, config: dict) -> bool:
+    """Set up the Deepgram TTS platform."""
+    return True
+
 class DeepgramTtsEntity(TextToSpeechEntity):
     """Representation of a Deepgram TTS entity."""
 
@@ -51,6 +55,8 @@ class DeepgramTtsEntity(TextToSpeechEntity):
 
         # Leer valores por defecto desde options o data
         self._default_voice = config_entry.options.get("voice", config_entry.data.get("voice", "aura-2-thalia-en"))
+        if not self._default_voice or self._default_voice.strip() == "":
+            self._default_voice = "aura-2-thalia-en"
         self._default_language = config_entry.options.get("language", config_entry.data.get("language", "en"))
 
     @property
@@ -77,8 +83,12 @@ class DeepgramTtsEntity(TextToSpeechEntity):
     @property
     def default_options(self) -> dict[str, Any]:
         """Return a dict including default options."""
+        voice = self._config_entry.options.get("voice", self._config_entry.data.get("voice", "aura-2-thalia-en"))
+        # Ensure voice is not empty
+        if not voice or voice.strip() == "":
+            voice = "aura-2-thalia-en"
         return {
-            ATTR_VOICE: self._config_entry.options.get("voice", self._config_entry.data.get("voice", "aura-2-thalia-en"))
+            ATTR_VOICE: voice
         }
 
     @callback
@@ -106,6 +116,9 @@ class DeepgramTtsEntity(TextToSpeechEntity):
             if options and ATTR_VOICE in options
             else self._config_entry.options.get("voice", self._config_entry.data.get("voice", "aura-2-thalia-en"))
         )
+        # Ensure voice is not empty
+        if not voice or voice.strip() == "":
+            voice = "aura-2-thalia-en"
         language_opt = (
             options.get("language")
             if options and "language" in options
@@ -132,7 +145,22 @@ class DeepgramTtsEntity(TextToSpeechEntity):
 
     async def async_stream_tts_audio(self, request: TTSAudioRequest) -> TTSAudioResponse:
         """Stream TTS audio for a message."""
-        voice = request.options.get(ATTR_VOICE, "aura-2-thalia-en")
+        # Use the same voice selection logic as non-streaming TTS
+        _LOGGER.debug(f"Streaming TTS request options: {request.options}")
+        _LOGGER.debug(f"Config entry options: {self._config_entry.options}")
+        _LOGGER.debug(f"Config entry data: {self._config_entry.data}")
+
+        voice = (
+            request.options.get(ATTR_VOICE)
+            if request.options and ATTR_VOICE in request.options
+            else self._config_entry.options.get("voice", self._config_entry.data.get("voice", "aura-2-thalia-en"))
+        )
+        _LOGGER.debug(f"Selected voice for streaming: {voice}")
+
+        # Ensure voice is not empty
+        if not voice or voice.strip() == "":
+            voice = "aura-2-thalia-en"
+            _LOGGER.debug(f"Voice was empty, using default: {voice}")
 
         async def message_gen() -> AsyncGenerator[str, None]:
             texto = ""
