@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-08-01
+
+### Fixed
+
+- **Streaming Audio Quality**: Eliminated clicks and micro-cuts in streaming TTS by completely removing audio trimming
+- **Audio Transitions**: Preserved natural audio transitions between sentences for smoother playback
+- **Buffer Management**: Implemented smart buffering with exponential growth for optimal streaming performance
+
+### Added
+
+- **Smart Sentence Detection**: Added multi-language sentence separators for better text segmentation
+- **Performance Optimization**: Skip unnecessary audio processing when trimming is disabled
+- **Enhanced Buffering**: Exponential buffer growth algorithm for adaptive streaming
+
+### Changed
+
+- **Audio Processing**: `TRIM_MS_FROM_END` reduced from 100ms to 0ms for natural audio preservation
+- **Synthesis Delay**: Increased from 100ms to 150ms for better buffer synchronization
+- **Text Processing**: Improved sentence generation with smart buffering and separator detection
+
+### Technical Details
+
+- **Stream Processor**: Completely rewrote sentence buffering algorithm in `stream_processor.py`
+- **Audio Quality**: Removed all audio trimming while maintaining processing optimization
+- **Multi-language Support**: Added comprehensive sentence separators for global language support
+- **Performance**: Reduced unnecessary processing by conditional trimming logic
+
 ## [1.0.1] - 2025-01-10
 
 ### Fixed

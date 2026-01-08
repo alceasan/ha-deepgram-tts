@@ -13,8 +13,10 @@ except ImportError:
 
 _LOGGER = logging.getLogger(__name__)
 
-TRIM_MS_FROM_END = 100
-SYNTHESIS_DELAY_S = 0.1
+# No trimming - preserve natural audio transitions for smoother streaming
+TRIM_MS_FROM_END = 0
+SYNTHESIS_DELAY_S = 0.15
+SENTENCE_SEPARATORS = "\n。.，,；;！!？?、"
 
 def remove_incompatible_characters(text: str) -> str:
     # Deepgram accepts UTF-8, but you can customize if needed
@@ -68,11 +70,17 @@ class DeepgramStreamProcessor:
         return "", buffer_text
 
     async def _sentence_generator(self, text_stream: AsyncIterable[str]) -> AsyncGenerator[str, None]:
-        """Yield complete, speakable sentences from a text stream."""
+        """Yield complete, speakable sentences from a text stream using smart buffering."""
         buffer = ""
         generated_sentences = 0
+        count = 0
         async for chunk in text_stream:
+            _LOGGER.debug("Streaming tts sentence: %s", chunk)
+            count += 1
+            min_len = 2 ** count * 10  # Exponential buffer growth for optimal streaming
             buffer += chunk
+
+            # Try to find complete sentences first
             while True:
                 sentence, rest = self._find_sentence(buffer)
                 if sentence:
@@ -82,16 +90,29 @@ class DeepgramStreamProcessor:
                     buffer = rest
                 else:
                     break
-        if buffer.strip() and re.search(r'\w', buffer.strip()):
-            generated_sentences += 1
-            yield buffer.strip()
+
+            # If buffer is long enough and ends with separator, yield it
+            msg = buffer.strip()
+            if len(msg) >= min_len:
+                # Check if buffer ends with a sentence separator
+                if msg and msg[-1] in SENTENCE_SEPARATORS:
+                    generated_sentences += 1
+                    yield msg
+                    buffer = ""
+
+        # Yield any remaining content in buffer
+        if msg := buffer.strip():
+            if re.search(r'\w', msg):
+                generated_sentences += 1
+                yield msg
+
         if generated_sentences == 0:
             _LOGGER.warning("No sentence was generated for synthesis from the received text.")
 
     def _trim_end_of_audio(self, audio_data: bytes) -> bytes:
         """
         Use pydub to trim TRIM_MS_FROM_END ms from the end of each mp3 fragment.
-        Replicates the logic from the edge-tts example.
+        Preserves audio quality while removing unnecessary silence.
         """
         if not AudioSegment:
             return audio_data
@@ -172,9 +193,13 @@ class DeepgramStreamProcessor:
                     if not audio_bytes:
                         _LOGGER.error("Deepgram returned empty audio for sentence: '%s'", sentence)
                         continue
-                    trimmed_mp3 = await asyncio.to_thread(self._trim_end_of_audio, audio_bytes)
-                    if trimmed_mp3:
-                        await output_queue.put(trimmed_mp3)
+                    # Skip trimming when TRIM_MS_FROM_END is 0 for optimal performance
+                    if TRIM_MS_FROM_END > 0:
+                        trimmed_mp3 = await asyncio.to_thread(self._trim_end_of_audio, audio_bytes)
+                        if trimmed_mp3:
+                            await output_queue.put(trimmed_mp3)
+                    else:
+                        await output_queue.put(audio_bytes)
                 except Exception as e:
                     _LOGGER.error("Error processing sentence '%s': %s", sentence[:30], e, exc_info=True)
         finally:
