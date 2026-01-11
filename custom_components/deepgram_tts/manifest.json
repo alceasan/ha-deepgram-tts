@@ -11,6 +11,5 @@
   "issue_tracker": "https://github.com/alceasan/ha-deepgram-tts/issues",
   "version": "1.0.2",
   "requirements": [],
-  "integration_type": "service",
-  "platforms": []
+  "integration_type": "service"
 }
